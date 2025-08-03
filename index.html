@@ -59,7 +59,7 @@
             margin: 0;
         }
         table td {
-            padding: 0;
+            padding: 2px 0;
             margin: 0;
         }
         
@@ -77,9 +77,37 @@
         .agent-bubbles circle,
         .agent-bubbles path,
         .rect-grid rect,
+        .category-icons path,
         .category-label-group {
-            transition: fill 0.3s ease, stroke 0.3s ease, stroke-width 0.3s ease, opacity 0.3s ease, filter 0.3s ease;
+            transition: fill 0.3s ease, stroke 0.3s ease, stroke-width 0.3s ease, opacity 0.3s ease, filter 0.3s ease, transform 0.3s ease;
         }
+
+        #note {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 14px;
+            color: #666;
+            text-align: center;
+            transition: opacity 3s ease;
+        }
+        #note span {
+            animation: gray-bounce 2s infinite;
+        }
+
+        @keyframes gray-bounce {
+            0% {
+                opacity: 0.5;
+            }
+            50% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0.5;
+            }
+        }
+
     </style>
 </head>
 <body>
@@ -94,6 +122,11 @@
             <svg id="svg-container"></svg>
         </div>
 
+        <p id="note">
+            <span>
+                Hover over the green bubbles to see the agent's performance on each task.
+            </span>
+        </p>
     </div>
 
     <script>
@@ -6374,18 +6407,6 @@
             
             const { xScale, yScale, sizeScale } = createChartScales(agentMetrics, chartWidth, chartHeight, margin);
             
-            // // Create axes
-            // const xAxis = d3.axisBottom(xScale)
-            //     .tickValues([d3.max(agentMetrics, d => d.averageCost)])
-            //     .tickFormat(d3.format('.4f'))
-            //     // .tickSize(0) // Remove tick lines
-            //     // .tickPadding(0); // Remove padding
-            
-            // const yAxis = d3.axisLeft(yScale)
-            //     .tickValues([d3.max(agentMetrics, d => d.successRate)])
-            //     .tickFormat(d3.format('.1f'))
-                
-            
 
             // Add X axis label group with max value and label
             const xAxisGroup = mainGroup.append('g')
@@ -6568,9 +6589,9 @@
                     .style('position', 'absolute')
                     .style('background', 'black')
                     .style('color', 'white')
-                    .style('padding', '24px')
+                    .style('padding', '16px')
                     .style('line-height', '1.5')
-                    .style('border-radius', '16px')
+                    .style('border-radius', '8px')
                     .style('font-size', '16px')
                     .style('pointer-events', 'none')
                     .style('z-index', '1000')
@@ -6620,10 +6641,10 @@
                     
                     connectingLinesGroup.append('path')
                         .attr('d', pathData)
-                        .attr('stroke', "#000")
+                        .attr('stroke', "#ccc")
                         .attr('stroke-width', 2)
                         .attr('fill', 'none')
-                        .attr('opacity', 0.7)
+                        .attr('opacity', 1)
                         .style('pointer-events', 'none');
                 });
             }
@@ -6782,9 +6803,9 @@
             // Add click handler to SVG background to deselect agents
             svg.on('click', function(event) {
                 // Only deselect if clicking on the SVG background (not on bubbles or other elements)
-                if (event.target === this) {
+                // if (event.target === this) {
                     resetVisualization();
-                }
+                // }
             });
             
             // Sort agentMetrics by rating (largest to smallest) so smaller bubbles appear on top
@@ -6800,7 +6821,7 @@
                 .attr('fill', 'url(#agent-bubble-gradient)')
                 .attr('stroke', '#fff')
                 .attr('stroke-width', 2)
-                .style('cursor', 'pointer')
+                // .style('cursor', 'pointer')
                 .style('opacity', 1)
                 .on('mouseover', function(event, d) {
                     selectAgent(d, event);
@@ -6837,7 +6858,7 @@
             
             // ------------------------------------------------------------------------------------------------------
             // Create icons for each category
-             categories.forEach((category, index) => {
+            categories.forEach((category, index) => {
                  const iconX = margin.left + (index * iconSpacing);
                  const iconY = iconsStartY;
                  
@@ -6872,23 +6893,6 @@
                      .style('fill', '#666')
                      .text(category);
 
-                 // After text is rendered, add a rectangle behind it
-                 // Use setTimeout to ensure text is rendered and getBBox is available
-                //  setTimeout(() => {
-                //      const bbox = labelText.node().getBBox();
-                //      labelGroup.insert('rect', 'text')
-                //          .attr('x', bbox.x - 10)
-                //          .attr('y', bbox.y - 4)
-                //          .attr('width', bbox.width + 20)
-                //          .attr('height', bbox.height + 8)
-                //          .attr('rx', 18)
-                //          .attr('ry', 18)
-                //          .attr('fill', '#fff')
-                //          .attr('stroke', '#ccc')
-                //          .attr('stroke-width', 1);
-                //  }, 0);
-                 
-   
                  // Add invisible circle behind the icon for better hover area
                  iconGroup.append('circle')
                      .attr('cx', iconSize / 2)
@@ -6896,17 +6900,23 @@
                      .attr('r', iconSize / 2 + 20) // Slightly larger than the icon
                      .attr('fill', 'transparent')
                      .style('cursor', 'pointer')
-                    //  .attr('stroke', '#444')
-                    //  .attr('stroke-width', '1')
                      .on('mouseover', function(event, d) {
                         d3.select(this.parentNode)
                             .select('.category-label-group')
                             .style('opacity', 1);
+
+                        // d3.select(this.parentNode)
+                        //     .select('path')
+                        //     .attr('transform', 'scale(2) translate(-6, -6)')
                      })
                      .on('mouseout', function(event, d) {
                         d3.select(this.parentNode)
                             .select('.category-label-group')
                             .style('opacity', 0);
+                        
+                        // d3.select(this.parentNode)
+                        //     .select('path')
+                        //     .attr('transform', 'scale(1.6) translate(-5, -5)')
                      });
 
                  // Create grid of rectangles for agent attempts below each category
@@ -6966,13 +6976,16 @@
             window.addEventListener('scroll', function() {
                 const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
                 const header = document.getElementById('header');
+                const note = document.getElementById("note");
                 
                 if (scrollTop < 50) {
                     header.style.opacity = '1';
+                    note.style.opacity = '1';
                     header.style.zIndex = 10;
                 } else {
                     header.style.opacity = '0';
                     header.style.zIndex = 0;
+                    note.style.opacity = '0';
                 }
             });
 
