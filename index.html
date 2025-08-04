@@ -91,6 +91,10 @@
             color: #666;
             text-align: center;
             transition: opacity 3s ease;
+            background: white;
+            border-radius: 16px;
+            padding:8px 16px;
+            box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.1);
         }
         #note span {
             animation: gray-bounce 2s infinite;
@@ -6419,19 +6423,18 @@
 
             xAxisGroup.append('path')
                 .attr('d', "M1.16699 6.99996H12.8337M12.8337 6.99996L7.00033 1.16663M12.8337 6.99996L7.00033 12.8333")
-                .attr('stroke', '#666')
+                .attr('stroke', '#000')
                 .attr('stroke-width', 1.5)
                 .attr('fill', 'none')
-                .attr('transform', 'scale(1.5) translate(-100, -30)')
+                .attr('transform', 'scale(1.5) translate(-85, -30)')
             
                 
             xAxisGroup.append('text')
                 .attr('class', 'x-axis-max-value')
                 .attr('x', 0)
                 .attr('y', 0)
-                .attr('fill', '#666')
                 .attr('text-anchor', 'end')
-                .style('font-size', '18px')
+                .style('font-size', '14px')
                 .text(`$${minCostFormatted} to $${maxCostFormatted}`);
             
             // Add axis label text
@@ -6441,8 +6444,8 @@
                 .attr('y', 20)
                 .attr('fill', '#666')
                 .attr('text-anchor', 'end')
-                .style('font-size', '18px')
-                .text('Average Cost');
+                .style('font-size', '14px')
+                .text('Avg. Cost');
 
 
 
@@ -6455,7 +6458,7 @@
 
             yAxisGroup.append('path')
                 .attr('d', "M1.16699 6.99996L7.00033 1.16663M7.00033 1.16663L12.8337 6.99996M7.00033 1.16663V12.8333")
-                .attr('stroke', '#666')
+                .attr('stroke', '#000')
                 .attr('stroke-width', 1.5)
                 .attr('fill', 'none')
                 .attr('transform', 'scale(1.5) translate(0, -30)')    
@@ -6466,7 +6469,7 @@
                 .attr('x', 0)
                 .attr('y', 0)
                 .attr('text-anchor', 'start')
-                .style('font-size', '18px')
+                .style('font-size', '14px')
                 .text(`${minSuccessRateFormatted}% to ${maxSuccessRateFormatted}%`);
             
             // Add axis label text
@@ -6476,7 +6479,7 @@
                 .attr('y', 20)
                 .attr('fill', '#666')
                 .attr('text-anchor', 'start')
-                .style('font-size', '18px')
+                .style('font-size', '14px')
                 .text('Success Rate');
             
          
@@ -6582,6 +6585,55 @@
                 return metricsGroup;
             }
             
+            // Function to create rotating metrics around agent bubble
+            function createAgentMetrics(agent, bubbleX, bubbleY, bubbleRadius) {
+                const metrics = [
+                    { label: '', value: agent.name },
+                    { label: 'Rating (5)', value: `${agent.rating.toFixed(1)}` },
+                    { label: 'Success Rate (%)', value: `${agent.successRate.toFixed(1)}` },
+                    { label: 'Avg. Cost', value: `$${agent.averageCost.toFixed(6)}` },
+                    // { label: 'Total Attempts', value: agent.totalAttempts },
+                    // { label: 'Rated Attempts', value: agent.totalRating }
+                ];
+                
+
+                // Create a group for the metrics
+                const metricsGroup = mainGroup.append('g')
+                    .attr('class', 'rotating-metrics');
+                
+                metrics.forEach((metric, index) => {
+                    const startX = bubbleX + bubbleRadius + 16;
+                    const startY = bubbleY + ( index * 30 );
+                    
+                    // Create text element radiating from bubble
+                    const textGroup = metricsGroup.append('g')
+                        .attr('transform', `translate(${startX}, ${startY})`);
+                    
+                    // Add metric text (label and value on same line)
+                    textGroup.append('text')
+                        .attr('text-anchor', 'start')
+                        .style('font-size', '18px')
+                        .style('font-weight', 'bold')
+                        .style('fill', '#000')
+                        .text(`${metric.value}`)
+                        .append('tspan')
+                        .attr('x', function() {
+                            // Find the width of the previous text node (the value)
+                            // 'this' is the tspan element; previousSibling is the text node
+                            // But in D3, parentNode is the <text> element
+                            // Use getBBox on the parent <text> for the value width
+                            return this.parentNode.getBBox().width + 8; // 8px padding
+                        })
+                        .attr('dy', '0')
+                        .style('fill', '#aaa')
+                        .style('font-weight', 'normal')
+                        .text(`${metric.label}`);
+                });
+                
+                return metricsGroup;
+            }
+            
+
             // Function to create tooltip positioned relative to mouse
             function createMouseTooltip(content, x, y) {
                 return d3.select('body').append('div')
@@ -6762,7 +6814,7 @@
                 // Reset all bubbles to default state
                 d3.selectAll('.agent-bubbles circle')
                     .style('fill', 'rgba(0,0,0,0)')
-                    .style('stroke', '#ccc')
+                    .style('stroke', '#ddd')
                     .style('stroke-width', 2);
                 
                 // Select this bubble
@@ -6770,7 +6822,7 @@
                     .style('opacity', 1)
                     .style('fill', '#000')
                     .style('stroke', '#fff')
-                    .style('stroke-width', 500)
+                    // .style('stroke-width', 500)
                     .attr('paint-order', 'stroke')
                 
                 // Create rotating metrics around the bubble
@@ -6778,7 +6830,8 @@
                 const bubbleY = yScale(agent.successRate);
                 const bubbleRadius = sizeScale(agent.rating);
                 
-                createRotatingMetrics(agent, bubbleX, bubbleY, bubbleRadius);
+                // createRotatingMetrics(agent, bubbleX, bubbleY, bubbleRadius);
+                createAgentMetrics(agent, bubbleX, bubbleY, bubbleRadius);
                 
                 // Remove any existing connecting lines
                 d3.selectAll('.connecting-lines').remove();
@@ -6969,7 +7022,7 @@
                 const newWidth = window.innerWidth;
                 
                 svg.attr('width', newWidth).attr('height', height);
-                mainGroup.attr('transform', `translate(${(newWidth - 1400) / 2}, 50)`);
+                mainGroup.attr('transform', `translate(${(newWidth - 1400) / 2}, ${vizY})`);
             });
 
             // Handle header fade out on scroll
