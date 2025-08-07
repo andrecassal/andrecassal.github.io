@@ -9,14 +9,12 @@ body {
             font-family: system-ui, sans-serif;
             margin: 0;
             padding: 0;
-            background-color: #f5f5f5;
+            background-color: #fff;
         }
     </style>
 
-
-
-
-
+</head>
+<body>
 
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <style>
@@ -120,9 +118,8 @@ body {
         }
 
     </style>
-</head>
-<body>
     <div id="dataviz-container">
+        <div id="dataviz-popup" class="dataviz-task-tooltip" style="position: absolute;"></div>
         <div id="dataviz-header">
             <h1>AI Agent<br />Leaderboard</h1>
             <p>The Upwork AI Agent Leaderboard evaluates agents on real jobs—software development, data analysis, design, writing, and more. With 1,200 tasks across 12 categories, it shows where agents excel and where gaps exist. Agents submit results for evaluation by freelancers who rate performance on a 1-5 scale.</p>
@@ -183,12 +180,17 @@ body {
             const margin = { top: 40, right: 40, bottom: 60, left: 60 };
             const chartWidth = 1400 - margin.left - margin.right;
             const chartHeight = 600 - margin.top - margin.bottom;
-            
             // Create main group for the entire visualization
             const mainGroup = svg.append('g')
                 .attr('class', 'main-visualization')
                 .attr('transform', `translate(${vizX}, ${vizY})`);
-            
+                  
+            const iconsStartY = margin.top + chartHeight + 200;
+            const iconSpacing =(chartWidth/categories.length) + 3;
+            const iconSize = 24;
+            const gridColumns = 5; // Number of columns in the grid - moved to global scope
+                        
+   
             // Add gradient definition for agent bubbles (green to yellow)
             const defs = svg.append('defs');
             const gradient = defs.append('linearGradient')
@@ -207,7 +209,19 @@ body {
                 .attr('offset', '50%')
                 .attr('stop-color', '#A9E3A5'); // green
             
-            
+
+            function loadBackground(){
+                const imageWidth = 1440;
+                const imageHeight = 685;
+                mainGroup.append('image')
+                    .attr('xlink:href', 'gradient.png')
+                    .attr('width', imageWidth)
+                    .attr('height', imageHeight)
+                    .attr('transform', `translate(${vizX + (chartWidth - imageWidth) / 2}, ${(iconsStartY - imageHeight - 40)})`);
+            }
+
+            loadBackground();                
+
             // Function to calculate agent metrics
             function calculateAgentMetrics(agents, attempts) {
                 return agents.map(agentName => {
@@ -246,90 +260,111 @@ body {
                     .domain([d3.min(metrics, d => d.successRate), d3.max(metrics, d => d.successRate)])
                     .range([margin.top + chartHeight, margin.top]);
                 
+                // const sizeScale = d3.scaleLinear()
+                //     .domain([d3.min(metrics, d => d.rating), d3.max(metrics, d => d.rating)]) // Use actual min to max ratings
+                //     .range([30, 80]);
                 const sizeScale = d3.scaleLinear()
-                    .domain([d3.min(metrics, d => d.rating), d3.max(metrics, d => d.rating)]) // Use actual min to max ratings
-                    .range([30, 80]);
-                
+                    .domain([d3.min(metrics, d => d.successRate), d3.max(metrics, d => d.successRate)]) // Use actual min to max ratings
+                    .range([30, 100]);
+
                 return { xScale, yScale, sizeScale };
             }
             
             const { xScale, yScale, sizeScale } = createChartScales(agentMetrics, chartWidth, chartHeight, margin);
             
 
-            // Add X axis label group with max value and label
-            const xAxisGroup = mainGroup.append('g')
-                .attr('class', 'x-axis-label-group')
-                .attr('transform', `translate(${chartWidth}, ${margin.top + chartHeight + 20})`);
-            
-            // Add max value text
-            const minCostFormatted = d3.format('.4f')(d3.min(agentMetrics, d => d.averageCost))
-            const maxCostFormatted = d3.format('.4f')(d3.max(agentMetrics, d => d.averageCost))
 
-            xAxisGroup.append('path')
-                .attr('d', "M1.16699 6.99996H12.8337M12.8337 6.99996L7.00033 1.16663M12.8337 6.99996L7.00033 12.8333")
-                .attr('stroke', '#000')
-                .attr('stroke-width', 1.5)
-                .attr('fill', 'none')
-                .attr('transform', 'scale(1.5) translate(-85, -30)')
-            
+
+
+            function createAxisLabels(){
+                // Add X axis label group with max value and label
+                const xAxisGroup = mainGroup.append('g')
+                    .attr('class', 'x-axis-label-group')
+                    .attr('transform', `translate(${chartWidth}, ${margin.top + chartHeight + 20})`);
                 
-            xAxisGroup.append('text')
-                .attr('class', 'x-axis-max-value')
-                .attr('x', 0)
-                .attr('y', 0)
-                .attr('text-anchor', 'end')
-                .style('font-size', '14px')
-                .text(`$${minCostFormatted} to $${maxCostFormatted}`);
-            
-            // Add axis label text
-            xAxisGroup.append('text')
-                .attr('class', 'x-axis-label')
-                .attr('x', 0)
-                .attr('y', 20)
-                .attr('fill', '#666')
-                .attr('text-anchor', 'end')
-                .style('font-size', '14px')
-                .text('Avg. Cost');
+                // Add max value text
+                const minCostFormatted = d3.format('.4f')(d3.min(agentMetrics, d => d.averageCost))
+                const maxCostFormatted = d3.format('.4f')(d3.max(agentMetrics, d => d.averageCost))
+
+                xAxisGroup.append('path')
+                    .attr('d', "M1.16699 6.99996H12.8337M12.8337 6.99996L7.00033 1.16663M12.8337 6.99996L7.00033 12.8333")
+                    .attr('stroke', '#000')
+                    .attr('stroke-width', 1.5)
+                    .attr('fill', 'none')
+                    .attr('transform', 'scale(1.5) translate(-85, -30)')
+                
+                    
+                xAxisGroup.append('text')
+                    .attr('class', 'x-axis-max-value')
+                    .attr('x', 0)
+                    .attr('y', 0)
+                    .attr('text-anchor', 'end')
+                    .style('font-size', '14px')
+                    .text(`$${minCostFormatted} to $${maxCostFormatted}`);
+                
+                // Add axis label text
+                xAxisGroup.append('text')
+                    .attr('class', 'x-axis-label')
+                    .attr('x', 0)
+                    .attr('y', 20)
+                    .attr('fill', '#666')
+                    .attr('text-anchor', 'end')
+                    .style('font-size', '14px')
+                    .text('Avg. Cost');
 
 
 
-            // Add Y axis label group with max value and label
-            const minSuccessRateFormatted = d3.format('.1f')(d3.min(agentMetrics, d => d.successRate))
-            const maxSuccessRateFormatted = d3.format('.1f')(d3.max(agentMetrics, d => d.successRate))
-            const yAxisGroup = mainGroup.append('g')
-                .attr('class', 'y-axis-label-group')
-                .attr('transform', `translate(${margin.left}, ${margin.top + chartHeight + 20})`);
+                // Add Y axis label group with max value and label
+                const minSuccessRateFormatted = d3.format('.1f')(d3.min(agentMetrics, d => d.successRate))
+                const maxSuccessRateFormatted = d3.format('.1f')(d3.max(agentMetrics, d => d.successRate))
+                const yAxisGroup = mainGroup.append('g')
+                    .attr('class', 'y-axis-label-group')
+                    .attr('transform', `translate(${margin.left}, ${margin.top + chartHeight + 20})`)
+                    .on('mouseover', function() {
+                        controlAxisVisibility(true);
+                    });
 
-            yAxisGroup.append('path')
-                .attr('d', "M1.16699 6.99996L7.00033 1.16663M7.00033 1.16663L12.8337 6.99996M7.00033 1.16663V12.8333")
-                .attr('stroke', '#000')
-                .attr('stroke-width', 1.5)
-                .attr('fill', 'none')
-                .attr('transform', 'scale(1.5) translate(0, -30)')    
-            
-            // Add max value text
-            yAxisGroup.append('text')
-                .attr('class', 'y-axis-max-value')
-                .attr('x', 0)
-                .attr('y', 0)
-                .attr('text-anchor', 'start')
-                .style('font-size', '14px')
-                .text(`${minSuccessRateFormatted}% to ${maxSuccessRateFormatted}%`);
-            
-            // Add axis label text
-            yAxisGroup.append('text')
-                .attr('class', 'y-axis-label')
-                .attr('x', 0)
-                .attr('y', 20)
-                .attr('fill', '#666')
-                .attr('text-anchor', 'start')
-                .style('font-size', '14px')
-                .text('Success Rate');
-            
-         
-            
+                yAxisGroup.append('path')
+                    .attr('d', "M1.16699 6.99996L7.00033 1.16663M7.00033 1.16663L12.8337 6.99996M7.00033 1.16663V12.8333")
+                    .attr('stroke', '#000')
+                    .attr('stroke-width', 1.5)
+                    .attr('fill', 'none')
+                    .attr('transform', 'scale(1.5) translate(0, -30)')    
+                
+                // Add max value text
+                yAxisGroup.append('text')
+                    .attr('class', 'y-axis-max-value')
+                    .attr('x', 0)
+                    .attr('y', 0)
+                    .attr('text-anchor', 'start')
+                    .style('font-size', '14px')
+                    .text(`${minSuccessRateFormatted}% to ${maxSuccessRateFormatted}%`);
+                
+                // Add axis label text
+                yAxisGroup.append('text')
+                    .attr('class', 'y-axis-label')
+                    .attr('x', 0)
+                    .attr('y', 20)
+                    .attr('fill', '#666')
+                    .attr('text-anchor', 'start')
+                    .style('font-size', '14px')
+                    .text('Success Rate');   
+            }
+              
+
             // Create bubble chart for agents
             const agentBubbles = mainGroup.append('g').attr('class', 'agent-bubbles');
+
+
+            function controlAxisVisibility(visible) {
+                if (visible) {
+                    d3.selectAll('.x-axis-label-group').style('opacity', 1);
+                    d3.selectAll('.y-axis-label-group').style('opacity', 1);
+                } else {
+                    d3.selectAll('.x-axis-label-group').style('opacity', 0.2);
+                    d3.selectAll('.y-axis-label-group').style('opacity', 0.2);
+                }
+            }
             
             // Function to reset all visual elements to default state
             function resetVisualization() {
@@ -363,6 +398,8 @@ body {
                 d3.selectAll('.task-dot')
                     .attr('fill', '#999')
                     .style('opacity', 1);
+
+                controlAxisVisibility(true);
                 
                 // Reset all rectangles to empty state
                 categories.forEach(category => {
@@ -374,67 +411,13 @@ body {
                 });
             }
             
-            // Function to create rotating metrics around agent bubble
-            function createRotatingMetrics(agent, bubbleX, bubbleY, bubbleRadius) {
-                const metrics = [
-                    { label: '', value: agent.name },
-                    { label: 'Rating (5)', value: `${agent.rating.toFixed(1)}` },
-                    { label: 'Success Rate (%)', value: `${agent.successRate.toFixed(1)}` },
-                    { label: 'Avg. Cost', value: `$${agent.averageCost.toFixed(6)}` },
-                    // { label: 'Total Attempts', value: agent.totalAttempts },
-                    // { label: 'Rated Attempts', value: agent.totalRating }
-                ];
-                
-                const radius = bubbleRadius + 20; // Very close to bubble edge
-                const startAngle = -30 * Math.PI / 180; // Start at 30 degrees
-                const angleStep = 20 * Math.PI / 180; // 15 degrees between each line
-                
-                // Create a group for the metrics
-                const metricsGroup = mainGroup.append('g')
-                    .attr('class', 'rotating-metrics');
-                
-                metrics.forEach((metric, index) => {
-                    const angle = startAngle + (index * angleStep);
-                    const startX = bubbleX + Math.cos(angle) * radius;
-                    const startY = bubbleY + Math.sin(angle) * radius;
-                    
-                    // Calculate rotation angle for text
-                    const textAngle = angle * 180 / Math.PI;
-                    
-                    // Create text element radiating from bubble
-                    const textGroup = metricsGroup.append('g')
-                        .attr('transform', `translate(${startX}, ${startY}) rotate(${textAngle})`);
-                    
-                    // Add metric text (label and value on same line)
-                    textGroup.append('text')
-                        .attr('text-anchor', 'start')
-                        .style('font-size', '18px')
-                        .style('font-weight', 'bold')
-                        .style('fill', '#000')
-                        .text(`${metric.value}`)
-                        .append('tspan')
-                        .attr('x', function() {
-                            // Find the width of the previous text node (the value)
-                            // 'this' is the tspan element; previousSibling is the text node
-                            // But in D3, parentNode is the <text> element
-                            // Use getBBox on the parent <text> for the value width
-                            return this.parentNode.getBBox().width + 8; // 8px padding
-                        })
-                        .attr('dy', '0')
-                        .style('fill', '#aaa')
-                        .style('font-weight', 'normal')
-                        .text(`${metric.label}`);
-                });
-                
-                return metricsGroup;
-            }
             
             // Function to create rotating metrics around agent bubble
             function createAgentMetrics(agent, bubbleX, bubbleY, bubbleRadius) {
                 const metrics = [
                     { label: '', value: agent.name },
-                    { label: 'Rating (5)', value: `${agent.rating.toFixed(1)}` },
-                    { label: 'Success Rate (%)', value: `${agent.successRate.toFixed(1)}` },
+                    // { label: 'Rating (5)', value: `${agent.rating.toFixed(1)}` },
+                    { label: 'Success Rate', value: `${agent.successRate.toFixed(1)}%` },
                     { label: 'Avg. Cost', value: `$${agent.averageCost.toFixed(6)}` },
                     // { label: 'Total Attempts', value: agent.totalAttempts },
                     // { label: 'Rated Attempts', value: agent.totalRating }
@@ -446,12 +429,12 @@ body {
                     .attr('class', 'rotating-metrics');
                 
                 metrics.forEach((metric, index) => {
-                    const startX = bubbleX + bubbleRadius + 16;
+                    const startX = bubbleX + bubbleRadius + 40;
                     const startY = bubbleY + ( index * 30 );
                     
                     // Create text element radiating from bubble
                     const textGroup = metricsGroup.append('g')
-                        .attr('transform', `translate(${startX}, ${startY})`);
+                        .attr('transform', `translate(${startX}, ${startY - 10})`);
                     
                     // Add metric text (label and value on same line)
                     textGroup.append('text')
@@ -480,9 +463,7 @@ body {
 
             // Function to create tooltip positioned relative to mouse
             function createMouseTooltip(content, x, y) {
-                return d3.select('body').append('div')
-                    .attr('class', 'dataviz-task-tooltip')
-                    .style('position', 'absolute')
+                return d3.select('#dataviz-popup')
                     .style('background', 'black')
                     .style('color', 'white')
                     .style('padding', '16px')
@@ -511,10 +492,10 @@ body {
                     
                     // Calculate icon center position
                     const iconCenterX = iconX + iconSize / 2;
-                    const iconCenterY = iconY - 20;
+                    const iconCenterY = iconY - 40;
                     
                     // Calculate bubble radius
-                    const bubbleRadius = sizeScale(agent.rating);
+                    const bubbleRadius = sizeScale(agent.successRate);
                     
                     // Calculate direction vector from bubble center to icon
                     const dx = iconCenterX - bubbleX;
@@ -664,15 +645,19 @@ body {
                 // Select this bubble
                 d3.select(event.target)
                     .style('opacity', 1)
-                    .style('fill', '#000')
-                    .style('stroke', '#fff')
-                    // .style('stroke-width', 500)
+                    // .style('fill', '#108A00')
+                    .style('fill', 'url(#agent-bubble-gradient)')
+                    .style('stroke', '#00000006')
+                    .style('stroke-width', 32)
                     .attr('paint-order', 'stroke')
                 
+                headerVisibility(false);
+                controlAxisVisibility(false);
+
                 // Create rotating metrics around the bubble
                 const bubbleX = xScale(agent.averageCost);
                 const bubbleY = yScale(agent.successRate);
-                const bubbleRadius = sizeScale(agent.rating);
+                const bubbleRadius = sizeScale(agent.successRate);
                 
                 // createRotatingMetrics(agent, bubbleX, bubbleY, bubbleRadius);
                 createAgentMetrics(agent, bubbleX, bubbleY, bubbleRadius);
@@ -714,7 +699,7 @@ body {
                 .append('circle')
                 .attr('cx', d => xScale(d.averageCost))
                 .attr('cy', d => yScale(d.successRate))
-                .attr('r', d => sizeScale(d.rating))
+                .attr('r', d => sizeScale(d.successRate))
                 .attr('fill', 'url(#agent-bubble-gradient)')
                 .attr('stroke', '#fff')
                 .attr('stroke-width', 2)
@@ -729,29 +714,81 @@ body {
                         .style('filter', 'none');
                 });
             
-            // Remove agent labels for cleaner look
+
+            createAxisLabels();
+   
+            // Define SVG icons for each category
+            const categoryIcons = {
+                'Admin support': {
+                    path: `M1 12.5996H19M6.34961 15.7988H13.6496M4.85938 12.6009V12.3909C4.85938 9.89086 7.14937 7.88086 9.99937 7.88086C12.8494 7.88086 15.1394 9.89086 15.1394 12.3909V12.6009M2.42969 12.5996H17.5697V18.9896H2.42969V12.5996ZM9.99937 5.76C11.3094 5.76 12.3794 4.69 12.3794 3.38C12.3794 2.07 11.3094 1 9.99937 1C8.68937 1 7.61937 2.07 7.61937 3.38C7.61937 4.69 8.68937 5.76 9.99937 5.76Z`,
+                    x: -2,
+                    y: -2,
+                    scale: 1.3
+                },
+                'IT & Networking': {
+                    path: `M15.686 15C15.1299 17.6299 13.8538 20.0534 12 22C9.43223 19.3038 8 15.7233 8 12C8 8.27674 9.43223 4.69615 12 2C10.1519 2.00048 8.34002 2.51311 6.76559 3.48098C5.19117 4.44885 3.91575 5.8341 3.08094 7.48294C2.24613 9.13178 1.88457 10.9797 2.03642 12.8216C2.18826 14.6635 2.84756 16.4273 3.94112 17.9171C5.03469 19.407 6.51973 20.5647 8.23141 21.2616C9.94308 21.9586 11.8144 22.1676 13.6377 21.8654C15.4609 21.5632 17.1648 20.7617 18.5601 19.5498C19.9554 18.3379 20.9876 16.763 21.542 15M2 12H10.5M20 6V4C20 3.46957 19.7893 2.96086 19.4142 2.58579C19.0391 2.21071 18.5304 2 18 2C17.4696 2 16.9609 2.21071 16.5858 2.58579C16.2107 2.96086 16 3.46957 16 4V6M15 6H21C21.5523 6 22 6.44772 22 7V10C22 10.5523 21.5523 11 21 11H15C14.4477 11 14 10.5523 14 10V7C14 6.44772 14.4477 6 15 6Z`,
+                    x: -2,
+                    y: -2,
+                    scale: 1.3
+                },
+                'Translation': {
+                    path: `M5.23301 8L11.033 14M4.26634 14L10.0663 8L11.9997 5M2.33301 5H13.933M7.16634 2H8.13301M21.3663 22L16.833 12L11.9997 22M13.933 18H19.733`,
+                    x: -2,
+                    y: -2,
+                    scale: 1.3
+                },
+                'Sales & Marketing': {
+                    path: `M6.08998 10.2777L4.94949 11.4182C4.42427 11.9434 3.5539 11.9434 3.02868 11.4182C2.50346 10.8929 2.50346 10.0226 3.02868 9.49734L7.83071 4.69531M6.87137 13.3388C6.34615 13.864 5.47578 13.864 4.95056 13.3388C4.42534 12.8136 4.42534 11.9432 4.95056 11.418M9.93177 14.12L8.79129 15.2605C8.26607 15.7857 7.3957 15.7857 6.87048 15.2605C6.34526 14.7353 6.34526 13.8649 6.87048 13.3397L8.01096 12.1992M9.9616 2.56445L13.368 5.97089C13.8933 6.49611 13.8482 7.4115 13.263 7.99675C12.6777 8.58199 11.7624 8.62701 11.2371 8.10179L7.8457 4.71036M9.96285 2.56526L10.6081 1.91999C11.5535 0.974588 13.0842 0.974588 14.0296 1.91999L18.2914 6.18179C19.2368 7.12719 19.2368 8.65783 18.2914 9.60323L10.7132 17.1814C10.1879 17.7067 9.31758 17.7067 8.79235 17.1814C8.26713 16.6562 8.26713 15.7858 8.79235 15.2606M2.5494 9.97754L1.70905 9.13719C0.76365 8.19179 0.76365 6.66114 1.70905 5.71574L5.70074 1.70905C6.64613 0.76365 8.17678 0.76365 9.12218 1.70905L9.96253 2.5494`,
+                    x: 0,
+                    y: 0,
+                    scale: 1.3
+                },
+                'Engineering & Architecture': {
+                    path: `M12.7402 3.54883L16.4502 7.25883M9.15919 7.13919L7.45919 5.43919C7.67199 4.84721 7.71223 4.20695 7.57521 3.59298C7.4382 2.97901 7.12957 2.41661 6.68528 1.97127C6.24098 1.52592 5.6793 1.21597 5.06566 1.07751C4.45202 0.939052 3.81167 0.977781 3.21919 1.18919L4.83919 2.81919L2.83919 4.81919L1.18919 3.21919C0.977781 3.81167 0.939052 4.45202 1.07751 5.06566C1.21597 5.6793 1.52592 6.24098 1.97127 6.68528C2.41661 7.12957 2.97901 7.4382 3.59298 7.57521C4.20695 7.71223 4.84721 7.67199 5.43919 7.45919L7.13919 9.15919M10.8398 12.8594L12.5398 14.5594C12.327 15.1514 12.2868 15.7916 12.4238 16.4056C12.5608 17.0195 12.8695 17.582 13.3138 18.0273C13.758 18.4726 14.3197 18.7826 14.9334 18.9211C15.547 19.0595 16.1874 19.0208 16.7798 18.8094L15.1598 17.1794L17.1598 15.1794L18.7898 16.7994C19.0013 16.2069 19.04 15.5665 18.9015 14.9529C18.7631 14.3393 18.4531 13.7776 18.0078 13.3333C17.5624 12.889 17 12.5804 16.3861 12.4434C15.7721 12.3063 15.1318 12.3466 14.5398 12.5594L12.8398 10.8594M9.20959 7.08921L14.5296 1.76921C14.7714 1.52431 15.0595 1.32986 15.3771 1.19715C15.6946 1.06443 16.0354 0.996094 16.3796 0.996094C16.7238 0.996094 17.0645 1.06443 17.3821 1.19715C17.6997 1.32986 17.9877 1.52431 18.2296 1.76921C18.4745 2.01105 18.6689 2.29912 18.8017 2.61669C18.9344 2.93426 19.0027 3.27502 19.0027 3.61921C19.0027 3.9634 18.9344 4.30416 18.8017 4.62173C18.6689 4.93931 18.4745 5.22737 18.2296 5.46921L5.82959 17.8692C5.46619 18.2394 4.99889 18.4905 4.48959 18.5892L2.56959 18.9992C2.35289 19.0518 2.12631 19.0478 1.91161 18.9875C1.39692 18.9273 1.50133 18.8128 1.34365 18.6551C1.18597 18.4975 1.07151 18.3019 1.01125 18.0872C0.950995 17.8725 0.946979 17.6459 0.999586 17.4292L1.37959 15.5092C1.47827 14.9999 1.72936 14.5326 2.09959 14.1692L9.20959 7.08921Z`,
+                    x: 0,
+                    y: 0,
+                    scale: 1.3
+                },
+                'Data Science & Analytics': {
+                    path: `M21.2104 15.89C20.5742 17.3945 19.5792 18.7203 18.3123 19.7513C17.0454 20.7824 15.5452 21.4875 13.9428 21.8048C12.3405 22.1222 10.6848 22.0422 9.12055 21.5718C7.55627 21.1015 6.13103 20.2551 4.96942 19.1067C3.80782 17.9583 2.94522 16.5428 2.45704 14.984C1.96886 13.4252 1.86996 11.7705 2.169 10.1647C2.46804 8.55882 3.1559 7.05067 4.17245 5.77207C5.189 4.49347 6.50329 3.48336 8.0004 2.83004M21.0004 12C21.5524 12 22.0054 11.551 21.9504 11.002C21.7199 8.70621 20.7025 6.56074 19.0707 4.92936C17.439 3.29798 15.2933 2.28108 12.9974 2.05104C12.4474 1.99604 11.9994 2.44904 11.9994 3.00104V11.001C11.9994 11.2663 12.1048 11.5206 12.2923 11.7082C12.4798 11.8957 12.7342 12.001 12.9994 12.001L21.0004 12Z`,
+                    x: -2,
+                    y: -2,
+                    scale: 1.3
+                },
+                'Writing': {
+                    path: `M1.02927 18.9816L6.749 13.2618M15.3091 8.73231C15.3091 8.73231 12.9861 12.0216 13.4546 15.5648L1 18.981L4.46503 6.55569C7.98862 7.0242 11.2975 4.70117 11.2975 4.70117L15.3091 8.73231ZM13.155 1.39018L18.3107 6.84583C18.6919 7.22701 18.6919 7.84502 18.3107 8.2262L17.2409 9.29598C16.8597 9.67715 16.2417 9.67715 15.8605 9.29598L10.7049 4.14032C10.3237 3.75915 10.3237 3.14114 10.7049 2.75996L11.7747 1.39018C12.1558 1.309 12.7738 1.309 13.155 1.39018ZM9.20946 12.2375C9.20946 13.0354 8.5627 13.6821 7.76489 13.6821C6.96707 13.6821 6.32031 13.0354 6.32031 12.2375C6.32031 11.4397 6.96707 10.793 7.76489 10.793C8.5627 10.793 9.20946 11.4397 9.20946 12.2375Z`,
+                    x: 0,
+                    y: -2,
+                    scale: 1.3
+                },
+                'Software Dev': {
+                    path: `M14.9113 5.30239L19 9.11416L14.9113 12.9259M5.08871 5.30239L1 9.11416L5.08871 12.9259M12 1L7.5 17`,
+                    x: 0,
+                    y: 0,
+                    scale: 1.3
+                },
+                'Design & Creative': {
+                    path: `M13.5342 16.897L3.21023 13.984M8.09963 6.99998C6.35576 9.70998 4.26196 10.46 1.73606 10.948C1.35227 10.9638 1.57391 11.0019 1.50871 11.0586C1.44351 11.1154 1.39372 11.1887 1.36425 11.2713C1.33478 11.354 1.32665 11.4432 1.34066 11.5301C1.35466 11.317 1.39033 11.3987 1.44413 11.767L8.52013 20.65C8.66385 20.8079 8.85331 20.9132 9.05993 20.95C9.26655 20.9868 9.47914 20.9531 9.66563 20.854C11.7101 19.405 14.8663 15.792 14.8663 14M17.1631 1.32198C17.3536 1.42486 17.5799 1.26851 17.8288 1.16183C18.0778 1.05515 18.3446 1.00024 18.6141 1.00024C18.8835 1.00024 19.1504 1.05515 19.3993 1.16183C19.6483 1.26851 19.8745 1.42486 20.065 1.32198C20.2556 1.81909 20.4067 2.0531 20.5098 2.31064C20.613 2.56819 20.666 2.84422 20.666 3.12298C20.666 3.40174 20.613 3.67777 20.5098 3.93531C20.4067 4.19286 20.2556 4.42686 20.065 4.62398L16.181 8.64298C16.0904 8.73674 16.0395 8.8639 16.0395 8.99648C16.0395 9.12906 16.0904 9.25622 16.181 9.34998L17.0935 10.294C17.5303 10.7459 17.7757 11.3589 17.7757 11.998C17.7757 12.6371 17.5303 13.25 17.0935 13.702L16.181 14.646C16.0903 14.7397 15.9674 14.7924 15.8392 14.7924C15.7111 14.7924 15.5882 14.7397 15.4975 14.646L7.47516 6.34798C7.38455 6.25421 7.33365 6.12706 7.33365 5.99448C7.33365 5.8619 7.38455 5.73474 7.47516 5.64098L8.3877 4.69698C8.82459 4.24509 9.41709 3.99123 10.0349 3.99123C10.6527 3.99123 11.2452 4.24509 11.3821 4.69698L12.5946 5.64098C12.6853 5.73471 12.8082 5.78737 12.9363 5.78737C13.0645 5.78737 13.1874 5.73471 13.2781 5.64098L17.1631 1.32198Z`,
+                    x: -2,
+                    y: -1,
+                    scale: 1.3
+                },
+                'Accounting & Consulting': {
+                    path: `M3.62891 10.0684V16.0431M7.85547 10.0684V16.0431M12.0684 10.0684V16.0431M16.2969 10.0684V16.0431M1 19H18.9241M9.96207 1L1 7.09421H18.9241L9.96207 1Z`,
+                    x: -1,
+                    y: -1,
+                    scale: 1.3
+                },
+                'Legal': {
+                    path: `M9.75 16.75V0.75M2.25 0.75H17.25M0.75 8.75L3.75 2.75L6.75 8.75M0.75 8.75H6.75M0.75 8.75C0.75 9.54565 1.06607 10.3087 1.32868 10.8713C2.19129 11.4339 2.95435 11.75 3.75 11.75C4.54565 11.75 5.30871 11.4339 5.87132 10.8713C6.43393 10.3087 6.75 9.54565 6.75 8.75M12.75 8.75L15.75 2.75L18.75 8.75M12.75 8.75H18.75M12.75 8.75C12.75 9.54565 13.0661 10.3087 13.6287 10.8713C14.1913 11.4339 14.9544 11.75 15.75 11.75C16.5456 11.75 17.3087 11.4339 17.8713 10.8713C18.4339 10.3087 18.75 9.54565 18.75 8.75M5.75 16.75H13.75C14.2804 16.75 14.7891 16.9607 15.1642 17.3358C15.5393 17.7109 15.75 18.2196 15.75 18.75H3.75C3.75 18.2196 3.96071 17.7109 4.33579 17.3358C4.71086 16.9607 5.21957 16.75 5.75 16.75Z`,
+                    x: 0,
+                    y: 0,
+                    scale: 1.3
+                }
+            };
             
             // Create SVG icons group (positioned below the bubble chart)
             const iconsGroup = mainGroup.append('g').attr('class', 'category-icons');
-            const iconsStartY = margin.top + chartHeight + 200;
-            const iconSpacing =(chartWidth/categories.length) + 3;
-            const iconSize = 24;
-            const gridColumns = 5; // Number of columns in the grid - moved to global scope
-            
-            // Define SVG icons for each category
-            const categoryIcons = {
-                'Admin support': `M1 12.5996H19M6.34961 15.7988H13.6496M4.85938 12.6009V12.3909C4.85938 9.89086 7.14937 7.88086 9.99937 7.88086C12.8494 7.88086 15.1394 9.89086 15.1394 12.3909V12.6009M2.42969 12.5996H17.5697V18.9896H2.42969V12.5996ZM9.99937 5.76C11.3094 5.76 12.3794 4.69 12.3794 3.38C12.3794 2.07 11.3094 1 9.99937 1C8.68937 1 7.61937 2.07 7.61937 3.38C7.61937 4.69 8.68937 5.76 9.99937 5.76Z`,
-                'IT & Networking': `M15.686 15C15.1299 17.6299 13.8538 20.0534 12 22C9.43223 19.3038 8 15.7233 8 12C8 8.27674 9.43223 4.69615 12 2C10.1519 2.00048 8.34002 2.51311 6.76559 3.48098C5.19117 4.44885 3.91575 5.8341 3.08094 7.48294C2.24613 9.13178 1.88457 10.9797 2.03642 12.8216C2.18826 14.6635 2.84756 16.4273 3.94112 17.9171C5.03469 19.407 6.51973 20.5647 8.23141 21.2616C9.94308 21.9586 11.8144 22.1676 13.6377 21.8654C15.4609 21.5632 17.1648 20.7617 18.5601 19.5498C19.9554 18.3379 20.9876 16.763 21.542 15M2 12H10.5M20 6V4C20 3.46957 19.7893 2.96086 19.4142 2.58579C19.0391 2.21071 18.5304 2 18 2C17.4696 2 16.9609 2.21071 16.5858 2.58579C16.2107 2.96086 16 3.46957 16 4V6M15 6H21C21.5523 6 22 6.44772 22 7V10C22 10.5523 21.5523 11 21 11H15C14.4477 11 14 10.5523 14 10V7C14 6.44772 14.4477 6 15 6Z`,
-                'Translation': `M5.23301 8L11.033 14M4.26634 14L10.0663 8L11.9997 5M2.33301 5H13.933M7.16634 2H8.13301M21.6663 22L16.833 12L11.9997 22M13.933 18H19.733`,
-                'Sales & Marketing': `M6.08998 10.2777L4.94949 11.4182C4.42427 11.9434 3.5539 11.9434 3.02868 11.4182C2.50346 10.8929 2.50346 10.0226 3.02868 9.49734L7.83071 4.69531M6.87137 13.3388C6.34615 13.864 5.47578 13.864 4.95056 13.3388C4.42534 12.8136 4.42534 11.9432 4.95056 11.418M9.93177 14.12L8.79129 15.2605C8.26607 15.7857 7.3957 15.7857 6.87048 15.2605C6.34526 14.7353 6.34526 13.8649 6.87048 13.3397L8.01096 12.1992M9.9616 2.56445L13.368 5.97089C13.8933 6.49611 13.8482 7.4115 13.263 7.99675C12.6777 8.58199 11.7624 8.62701 11.2371 8.10179L7.8457 4.71036M9.96285 2.56526L10.6081 1.91999C11.5535 0.974588 13.0842 0.974588 14.0296 1.91999L18.2914 6.18179C19.2368 7.12719 19.2368 8.65783 18.2914 9.60323L10.7132 17.1814C10.1879 17.7067 9.31758 17.7067 8.79235 17.1814C8.26713 16.6562 8.26713 15.7858 8.79235 15.2606M2.5494 9.97754L1.70905 9.13719C0.76365 8.19179 0.76365 6.66114 1.70905 5.71574L5.70074 1.70905C6.64613 0.76365 8.17678 0.76365 9.12218 1.70905L9.96253 2.5494`,                
-                'Engineering & Architecture': `M12.7402 3.54883L16.4502 7.25883M9.15919 7.13919L7.45919 5.43919C7.67199 4.84721 7.71223 4.20695 7.57521 3.59298C7.4382 2.97901 7.12957 2.41661 6.68528 1.97127C6.24098 1.52592 5.6793 1.21597 5.06566 1.07751C4.45202 0.939052 3.81167 0.977781 3.21919 1.18919L4.83919 2.81919L2.83919 4.81919L1.18919 3.21919C0.977781 3.81167 0.939052 4.45202 1.07751 5.06566C1.21597 5.6793 1.52592 6.24098 1.97127 6.68528C2.41661 7.12957 2.97901 7.4382 3.59298 7.57521C4.20695 7.71223 4.84721 7.67199 5.43919 7.45919L7.13919 9.15919M10.8398 12.8594L12.5398 14.5594C12.327 15.1514 12.2868 15.7916 12.4238 16.4056C12.5608 17.0195 12.8695 17.582 13.3138 18.0273C13.758 18.4726 14.3197 18.7826 14.9334 18.9211C15.547 19.0595 16.1874 19.0208 16.7798 18.8094L15.1598 17.1794L17.1598 15.1794L18.7898 16.7994C19.0013 16.2069 19.04 15.5665 18.9015 14.9529C18.7631 14.3393 18.4531 13.7776 18.0078 13.3333C17.5624 12.889 17 12.5804 16.3861 12.4434C15.7721 12.3063 15.1318 12.3466 14.5398 12.5594L12.8398 10.8594M9.20959 7.08921L14.5296 1.76921C14.7714 1.52431 15.0595 1.32986 15.3771 1.19715C15.6946 1.06443 16.0354 0.996094 16.3796 0.996094C16.7238 0.996094 17.0645 1.06443 17.3821 1.19715C17.6997 1.32986 17.9877 1.52431 18.2296 1.76921C18.4745 2.01105 18.6689 2.29912 18.8017 2.61669C18.9344 2.93426 19.0027 3.27502 19.0027 3.61921C19.0027 3.9634 18.9344 4.30416 18.8017 4.62173C18.6689 4.93931 18.4745 5.22737 18.2296 5.46921L5.82959 17.8692C5.46619 18.2394 4.99889 18.4905 4.48959 18.5892L2.56959 18.9992C2.35289 19.0518 2.12631 19.0478 1.91161 18.9875C1.69692 18.9273 1.50133 18.8128 1.34365 18.6551C1.18597 18.4975 1.07151 18.3019 1.01125 18.0872C0.950995 17.8725 0.946979 17.6459 0.999586 17.4292L1.37959 15.5092C1.47827 14.9999 1.72936 14.5326 2.09959 14.1692L9.20959 7.08921Z`,
-                'Data Science & Analytics': `M21.2104 15.89C20.5742 17.3945 19.5792 18.7203 18.3123 19.7513C17.0454 20.7824 15.5452 21.4875 13.9428 21.8048C12.3405 22.1222 10.6848 22.0422 9.12055 21.5718C7.55627 21.1015 6.13103 20.2551 4.96942 19.1067C3.80782 17.9583 2.94522 16.5428 2.45704 14.984C1.96886 13.4252 1.86996 11.7705 2.169 10.1647C2.46804 8.55882 3.1559 7.05067 4.17245 5.77207C5.189 4.49347 6.50329 3.48336 8.0004 2.83004M21.0004 12C21.5524 12 22.0054 11.551 21.9504 11.002C21.7199 8.70621 20.7025 6.56074 19.0707 4.92936C17.439 3.29798 15.2933 2.28108 12.9974 2.05104C12.4474 1.99604 11.9994 2.44904 11.9994 3.00104V11.001C11.9994 11.2663 12.1048 11.5206 12.2923 11.7082C12.4798 11.8957 12.7342 12.001 12.9994 12.001L21.0004 12Z`,
-                'Writing': `M1.02927 18.9816L6.749 13.2618M15.3091 8.73231C15.3091 8.73231 12.9861 12.0216 13.4546 15.5648L1 18.981L4.46503 6.55569C7.98862 7.0242 11.2975 4.70117 11.2975 4.70117L15.3091 8.73231ZM13.155 1.69018L18.3107 6.84583C18.6919 7.22701 18.6919 7.84502 18.3107 8.2262L17.2409 9.29598C16.8597 9.67715 16.2417 9.67715 15.8605 9.29598L10.7049 4.14032C10.3237 3.75915 10.3237 3.14114 10.7049 2.75996L11.7747 1.69018C12.1558 1.309 12.7738 1.309 13.155 1.69018ZM9.20946 12.2375C9.20946 13.0354 8.5627 13.6821 7.76489 13.6821C6.96707 13.6821 6.32031 13.0354 6.32031 12.2375C6.32031 11.4397 6.96707 10.793 7.76489 10.793C8.5627 10.793 9.20946 11.4397 9.20946 12.2375Z`,
-                'Software Dev': `M14.9113 5.30239L19 9.11416L14.9113 12.9259M5.08871 5.30239L1 9.11416L5.08871 12.9259M12 1L7.5 17`,
-                'Design & Creative': `M13.5342 16.897L3.21023 13.984M8.09963 6.99998C6.35576 9.70998 4.26196 10.46 1.73606 10.948C1.65227 10.9638 1.57391 11.0019 1.50871 11.0586C1.44351 11.1154 1.39372 11.1887 1.36425 11.2713C1.33478 11.354 1.32665 11.4432 1.34066 11.5301C1.35466 11.617 1.39033 11.6987 1.44413 11.767L8.52013 20.65C8.66385 20.8079 8.85331 20.9132 9.05993 20.95C9.26655 20.9868 9.47914 20.9531 9.66563 20.854C11.7101 19.405 14.8663 15.792 14.8663 14M17.1631 1.62198C17.3536 1.42486 17.5799 1.26851 17.8288 1.16183C18.0778 1.05515 18.3446 1.00024 18.6141 1.00024C18.8835 1.00024 19.1504 1.05515 19.3993 1.16183C19.6483 1.26851 19.8745 1.42486 20.065 1.62198C20.2556 1.81909 20.4067 2.0531 20.5098 2.31064C20.613 2.56819 20.666 2.84422 20.666 3.12298C20.666 3.40174 20.613 3.67777 20.5098 3.93531C20.4067 4.19286 20.2556 4.42686 20.065 4.62398L16.181 8.64298C16.0904 8.73674 16.0395 8.8639 16.0395 8.99648C16.0395 9.12906 16.0904 9.25622 16.181 9.34998L17.0935 10.294C17.5303 10.7459 17.7757 11.3589 17.7757 11.998C17.7757 12.6371 17.5303 13.25 17.0935 13.702L16.181 14.646C16.0903 14.7397 15.9674 14.7924 15.8392 14.7924C15.7111 14.7924 15.5882 14.7397 15.4975 14.646L7.47516 6.34798C7.38455 6.25421 7.33365 6.12706 7.33365 5.99448C7.33365 5.8619 7.38455 5.73474 7.47516 5.64098L8.3877 4.69698C8.82459 4.24509 9.41709 3.99123 10.0349 3.99123C10.6527 3.99123 11.2452 4.24509 11.6821 4.69698L12.5946 5.64098C12.6853 5.73471 12.8082 5.78737 12.9363 5.78737C13.0645 5.78737 13.1874 5.73471 13.2781 5.64098L17.1631 1.62198Z`,
-                'Accounting & Consulting': `M3.62891 10.0684V16.0431M7.85547 10.0684V16.0431M12.0684 10.0684V16.0431M16.2969 10.0684V16.0431M1 19H18.9241M9.96207 1L1 7.09421H18.9241L9.96207 1Z`,
-                'Legal': `M9.75 16.75V0.75M2.25 0.75H17.25M0.75 8.75L3.75 2.75L6.75 8.75M0.75 8.75H6.75M0.75 8.75C0.75 9.54565 1.06607 10.3087 1.62868 10.8713C2.19129 11.4339 2.95435 11.75 3.75 11.75C4.54565 11.75 5.30871 11.4339 5.87132 10.8713C6.43393 10.3087 6.75 9.54565 6.75 8.75M12.75 8.75L15.75 2.75L18.75 8.75M12.75 8.75H18.75M12.75 8.75C12.75 9.54565 13.0661 10.3087 13.6287 10.8713C14.1913 11.4339 14.9544 11.75 15.75 11.75C16.5456 11.75 17.3087 11.4339 17.8713 10.8713C18.4339 10.3087 18.75 9.54565 18.75 8.75M5.75 16.75H13.75C14.2804 16.75 14.7891 16.9607 15.1642 17.3358C15.5393 17.7109 15.75 18.2196 15.75 18.75H3.75C3.75 18.2196 3.96071 17.7109 4.33579 17.3358C4.71086 16.9607 5.21957 16.75 5.75 16.75Z`,
-            };
             
             // ------------------------------------------------------------------------------------------------------
             // Create icons for each category
@@ -765,36 +802,33 @@ body {
               
                  
                  // Add the SVG path
-                 iconGroup.append('path')
-                     .attr('d', categoryIcons[category] ? categoryIcons[category] : '')
+                 if (categoryIcons.hasOwnProperty(category) && categoryIcons[category].hasOwnProperty('path')){
+                    iconGroup.append('path')
+                     .attr('d', categoryIcons[category].path)
                      .attr('stroke', '#333')
                      .attr('stroke-width', '2')
                      .attr('stroke-linecap', 'round')
                      .attr('stroke-linejoin', 'round')
                      .attr('fill', 'none')
-                     .attr('transform', `scale(1.6) translate(-5, -5)`);
-                 
-                 // --------------------------------------------------------------
-                 // Add category label below icon (initially hidden)
-                 // Create a group for the label and background
-                 const labelGroup = iconGroup.append('g')
-                     .attr('class', 'category-label-group')
-                     .style('opacity', 0); // Initially hidden
-
+                     .attr('transform', `scale(${categoryIcons[category].scale}) translate(${categoryIcons[category].x}, ${categoryIcons[category].y})`);
+                 }
+ 
                  // Add the text element
-                 const labelText = labelGroup.append('text')
+                 const labelGroup = iconGroup.append('text')
                      .attr('x', iconSize / 2)
-                     .attr('y', iconSize - 60)
+                     .attr('y', iconSize / 2 - 40)
                      .attr('text-anchor', 'middle')
+                     .attr('class', 'category-label-group')
                      .style('font-size', '14px')
                      .style('fill', '#666')
+                     .style('opacity', 0)
                      .text(category);
 
                  // Add invisible circle behind the icon for better hover area
                  iconGroup.append('circle')
                      .attr('cx', iconSize / 2)
                      .attr('cy', iconSize / 2)
-                     .attr('r', iconSize / 2 + 20) // Slightly larger than the icon
+                     .attr('r', iconSize)
                      .attr('fill', 'transparent')
                      .style('cursor', 'pointer')
                      .on('mouseover', function(event, d) {
@@ -824,14 +858,10 @@ body {
                  // Get all attempts for this category
                  const categoryAttempts = attemptsWithData.filter(attempt => attempt.task.category === category);
                  
-                 // Calculate grid width to center it under the icon
-                //  const gridWidth = gridColumns * rectSize + (gridColumns - 1) * rectSpacing;
-                //  const gridStartX = iconX + (iconSize / 2) - (gridWidth / 2); // Center the grid under the icon
-                 
                  // Create a group for the rectangle grid
                  const rectGridGroup = iconGroup.append('g')
                      .attr('class', 'rect-grid')
-                     .attr('transform', `translate(${-(30)}, ${60})`);
+                     .attr('transform', `translate(${-25}, ${60})`);
                  
                  // Create empty grid of rectangles (initially unpainted)
                  const maxAttempts = Math.max(...categories.map(cat => 
@@ -869,21 +899,31 @@ body {
                 mainGroup.attr('transform', `translate(${(newWidth - 1400) / 2}, ${vizY})`);
             });
 
-            // Handle header fade out on scroll
-            window.addEventListener('scroll', function() {
-                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            function headerVisibility(visible) {
                 const header = document.getElementById('dataviz-header');
-                const note = document.getElementById("dataviz-note");
-                
-                if (scrollTop < 50) {
+                const note = document.getElementById("dataviz-note");                
+                if (visible) {
                     header.style.opacity = '1';
                     note.style.opacity = '1';
                     header.style.zIndex = 10;
-                    resetVisualization();
                 } else {
                     header.style.opacity = '0';
                     header.style.zIndex = 0;
                     note.style.opacity = '0';
+                }
+            }
+
+
+            // Handle header fade out on scroll
+            window.addEventListener('scroll', function() {
+                const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+
+                
+                if (scrollTop < 50) {
+                    headerVisibility(true);
+                    resetVisualization();
+                } else {
+                    headerVisibility(false);
                 }
             });
 
