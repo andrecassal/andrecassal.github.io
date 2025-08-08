@@ -119,7 +119,7 @@ body {
 
     </style>
     <div id="dataviz-container">
-        <div id="dataviz-popup" class="dataviz-task-tooltip" style="position: absolute;"></div>
+        <div id="dataviz-popup" class="dataviz-task-tooltip" style="position: absolute; z-index:1000"></div>
         <div id="dataviz-header">
             <h1>AI Agent<br />Leaderboard</h1>
             <p>The Upwork AI Agent Leaderboard evaluates agents on real jobs—software development, data analysis, design, writing, and more. With 1,200 tasks across 12 categories, it shows where agents excel and where gaps exist. Agents submit results for evaluation by freelancers who rate performance on a 1-5 scale.</p>
@@ -210,17 +210,21 @@ body {
                 .attr('stop-color', '#A9E3A5'); // green
             
 
-            function loadBackground(){
-                const imageWidth = 1440;
-                const imageHeight = 685;
-                mainGroup.append('image')
-                    .attr('xlink:href', 'gradient.png')
-                    .attr('width', imageWidth)
-                    .attr('height', imageHeight)
-                    .attr('transform', `translate(${vizX + (chartWidth - imageWidth) / 2}, ${(iconsStartY - imageHeight - 40)})`);
-            }
+            // function loadBackground(){
+            //     const imageWidth = 1440;
+            //     const imageHeight = 685;
+            //     mainGroup.append('image')
+            //         .attr('xlink:href', 'gradient.png')
+            //         .attr('width', imageWidth)
+            //         .attr('height', imageHeight)
+            //         // .attr('stroke', 'red')
+            //         // .attr('stroke-width', 1)
+            //         .attr('x', vizX - imageWidth/2)
+            //         .attr('y', iconsStartY - imageHeight - 40)
+            //         // .attr('transform', `translate(${vizX - imageWidth/2}, ${(iconsStartY - imageHeight - 40)})`);
+            // }
 
-            loadBackground();                
+            // loadBackground();                
 
             // Function to calculate agent metrics
             function calculateAgentMetrics(agents, attempts) {
@@ -409,8 +413,8 @@ body {
                     .style('stroke-width', 2)
                 
                 // Remove tooltip
-                d3.selectAll('.dataviz-tooltip').remove();
-                d3.selectAll('.dataviz-task-tooltip').remove();
+                d3.selectAll('#dataviz-popup').style('opacity',0);
+                // d3.selectAll('.dataviz-task-tooltip').remove();
                 
                 // Remove rotating metrics
                 d3.selectAll('.rotating-metrics').remove();
@@ -496,6 +500,7 @@ body {
 
             // Function to create tooltip positioned relative to mouse
             function createMouseTooltip(content, x, y) {
+                console.log(x, y, content);
                 return d3.select('#dataviz-popup')
                     .style('background', 'black')
                     .style('color', 'white')
@@ -507,7 +512,8 @@ body {
                     .style('z-index', '1000')
                     .html(content)
                     .style('left', (x + 20) + 'px')
-                    .style('top', (y - 10) + 'px');
+                    .style('top', (y - 10) + 'px')
+                    .style('opacity',1);;
             }
             
             // Function to create connecting lines
@@ -622,14 +628,16 @@ body {
                                 .style('cursor', 'pointer')
                                 .on('mouseover', function(event) {
                                     d3.select(event.target)
-                                        .style('stroke', '#fff')
-                                        .style('stroke-width', 10)
-                                        .attr('paint-order', 'stroke')
+                                        .style('fill', '#000')
                                     const tooltipContent = `
                                         <table>
                                             <tr>
                                                 <th>Status:</th>
                                                 <td>${attempt.status}</td>
+                                            </tr>
+                                            <tr title="${attempt.task.description}">
+                                                <th>Task:</th>
+                                                <td>${attempt.task.description.substring(0, 30)}...</td>
                                             </tr>
                                             <tr>
                                                 <th>Cost:</th>
@@ -638,10 +646,6 @@ body {
                                             <tr>
                                                 <th>Rating:</th>
                                                 <td>${attempt.rating}/5</td>
-                                            </tr>
-                                            <tr title="${attempt.task.description}">
-                                                <th>Task:</th>
-                                                <td>${attempt.task.description.substring(0, 30)}...</td>
                                             </tr>
                                             <tr>
                                                 <th>Category:</th>
@@ -653,8 +657,8 @@ body {
                                 })
                                 .on('mouseout', function() {
                                     d3.select(this)
-                                        .style('stroke-width', 0)
-                                    d3.selectAll('.task-tooltip').remove();
+                                        .style('fill', statusColor(attempt.status))
+                                    d3.select('#dataviz-popup').style('opacity',0);
                                 });
                         }
                     });
@@ -678,8 +682,8 @@ body {
                 // Select this bubble
                 d3.select(event.target)
                     .style('opacity', 1)
-                    // .style('fill', '#108A00')
-                    .style('fill', 'url(#agent-bubble-gradient)')
+                    .style('fill', '#108A00')
+                    // .style('fill', 'url(#agent-bubble-gradient)')
                     .style('stroke', '#00000006')
                     .style('stroke-width', 32)
                     .attr('paint-order', 'stroke')
